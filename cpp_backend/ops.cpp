@@ -3,9 +3,7 @@
 #include <numeric>
 
 Tensor add(Tensor& a, Tensor& b) {
-    Tensor out;
-    out.requires_grad = a.requires_grad || b.requires_grad;
-    out.parents = { &a, &b };
+    bool requires_grad = a.requires_grad || b.requires_grad;
 
     // ---- shape checks ----
     int a_dims = a.shape.size();
@@ -31,25 +29,26 @@ Tensor add(Tensor& a, Tensor& b) {
     }
 
     // ---- forward ----
-    out.shape = a.shape;
-    out.data.resize(a.data.size());
+    std::vector<float> out_data(a.data.size());
 
     int N = a.data.size() / C;
 
     if (!bias_case) {
         // elementwise add
         for (size_t i = 0; i < a.data.size(); i++) {
-            out.data[i] = a.data[i] + b.data[i];
+            out_data[i] = a.data[i] + b.data[i];
         }
     } else {
         // broadcast bias
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < C; j++) {
-                out.data[i * C + j] =
+                out_data[i * C + j] =
                     a.data[i * C + j] + b.data[j];
             }
         }
     }
+
+    Tensor out(out_data, a.shape, requires_grad);
 
     if (out.requires_grad) {
         out.parents = {&a, &b};
