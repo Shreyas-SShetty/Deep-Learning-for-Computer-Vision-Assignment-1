@@ -1,0 +1,25 @@
+# Build
+build/
+cmake-build-*/
+
+# CLion
+.idea/
+*.iml
+
+# Binaries
+*.exe
+*.out
+*.o
+*.obj
+*.dll
+*.so
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# OS
+.DS_Store
+Thumbs.db
