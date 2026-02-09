@@ -28,9 +28,10 @@ Tensor CrossEntropyLoss::forward(Tensor& logits,
 
         float sum_exp = 0.0f;
         for (int c = 0; c < C; c++) {
-            float e = std::exp(logits.data[n * C + c] - max_logit);
-            softmax[n * C + c] = e;
-            sum_exp += e;
+            float z = logits.data[n*C + c] - max_logit;
+            z = std::max(-20.0f, std::min(20.0f, z));
+            softmax[n*C + c] = exp(z);
+            sum_exp += softmax[n*C + c];
         }
 
         for (int c = 0; c < C; c++)

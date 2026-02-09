@@ -5,7 +5,7 @@
 
 /* ---------------- Linear ---------------- */
 Linear::Linear(int in_features, int out_features)
-    : weight(std::vector<float>(in_features * out_features, 0.01f),
+    : weight(std::vector<float>(in_features * out_features, 0.001f),
              {in_features, out_features}, true),
       bias(std::vector<float>(out_features, 0.0f),
            {1, out_features}, true) {}
@@ -49,7 +49,7 @@ Conv2D::Conv2D(int in_c, int out_c, int k,
       kernel_size(k),
       stride(s),
       padding(p),
-      weight(std::vector<float>(out_c * in_c * k * k, 0.01f),
+      weight(std::vector<float>(out_c * in_c * k * k, 0.001f),
              {out_c, in_c, k, k}, true),
       bias(std::vector<float>(out_c, 0.0f),
            {out_c}, true) {}
