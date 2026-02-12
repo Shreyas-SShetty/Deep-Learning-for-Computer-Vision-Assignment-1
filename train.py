@@ -68,6 +68,7 @@ def main(args):
             # print('logits grad:', logits.grad)
             optimizer.step(model.parameters())
             optimizer.zero_grad(model.parameters())
+            model.clear_forward_cache()
 
             epoch_loss += loss.data[0]
 
