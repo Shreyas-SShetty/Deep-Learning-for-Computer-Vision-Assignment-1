@@ -11,9 +11,75 @@ Linear::Linear(int in_features, int out_features)
            {1, out_features}, true) {}
 
 Tensor Linear::forward(Tensor& x) {
-    Tensor out = matmul(x, weight);
-    Tensor b = bias;  // broadcast manually later if needed
-    return add(out, b);
+    assert(x.shape.size() == 2);
+    assert(weight.shape.size() == 2);
+    assert((int)bias.shape.size() == 2 || (int)bias.shape.size() == 1);
+
+    int M = x.shape[0];
+    int K = x.shape[1];
+    int N = weight.shape[1];
+
+    assert(weight.shape[0] == K);
+
+    std::vector<float> out_data(M * N, 0.0f);
+
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0.0f;
+            for (int k = 0; k < K; k++) {
+                sum += x.data[i * K + k] * weight.data[k * N + j];
+            }
+            out_data[i * N + j] = sum + bias.data[j];
+        }
+    }
+
+    Tensor out(out_data, {M, N}, x.requires_grad ||
+               weight.requires_grad || bias.requires_grad);
+
+    if (out.requires_grad) {
+        out.parents = {&x, &weight, &bias};
+        Tensor* x_ptr = &x;
+        Tensor* w_ptr = &weight;
+        Tensor* b_ptr = &bias;
+
+        out.backward_fn = [x_ptr, w_ptr, b_ptr, M, K, N](Tensor& self) {
+            if (x_ptr->requires_grad) {
+                for (int i = 0; i < M; i++) {
+                    for (int k = 0; k < K; k++) {
+                        float g = 0.0f;
+                        for (int j = 0; j < N; j++) {
+                            g += self.grad[i * N + j] * w_ptr->data[k * N + j];
+                        }
+                        x_ptr->grad[i * K + k] += g;
+                    }
+                }
+            }
+
+            if (w_ptr->requires_grad) {
+                for (int k = 0; k < K; k++) {
+                    for (int j = 0; j < N; j++) {
+                        float g = 0.0f;
+                        for (int i = 0; i < M; i++) {
+                            g += x_ptr->data[i * K + k] * self.grad[i * N + j];
+                        }
+                        w_ptr->grad[k * N + j] += g;
+                    }
+                }
+            }
+
+            if (b_ptr->requires_grad) {
+                for (int j = 0; j < N; j++) {
+                    float g = 0.0f;
+                    for (int i = 0; i < M; i++) {
+                        g += self.grad[i * N + j];
+                    }
+                    b_ptr->grad[j] += g;
+                }
+            }
+        };
+    }
+
+    return out;
 }
 
 /* ---------------- ReLU ---------------- */
