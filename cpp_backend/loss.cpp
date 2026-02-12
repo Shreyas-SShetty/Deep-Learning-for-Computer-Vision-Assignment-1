@@ -48,13 +48,21 @@ Tensor CrossEntropyLoss::forward(Tensor& logits,
     if (loss.requires_grad) {
         loss.parents = {&logits};
 
-        loss.backward_fn = [&](Tensor& self) {
+        Tensor* logits_ptr = &logits;
+        std::vector<float> softmax_cache = softmax;
+        std::vector<int> target_cache = targets;
+
+        loss.backward_fn = [logits_ptr,
+                            N,
+                            C,
+                            softmax_cache,
+                            target_cache](Tensor& self) {
             for (int n = 0; n < N; n++) {
                 for (int c = 0; c < C; c++) {
-                    float grad = softmax[n * C + c];
-                    if (c == targets[n])
+                    float grad = softmax_cache[n * C + c];
+                    if (c == target_cache[n])
                         grad -= 1.0f;
-                    logits.grad[n * C + c] += grad / N;
+                    logits_ptr->grad[n * C + c] += grad / N;
                 }
             }
         };

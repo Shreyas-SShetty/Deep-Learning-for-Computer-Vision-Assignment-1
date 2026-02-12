@@ -26,9 +26,11 @@ Tensor ReLU::forward(Tensor& x) {
 
     if (out.requires_grad) {
         out.parents = {&x};
-        out.backward_fn = [&](Tensor& self) {
-            for (size_t i = 0; i < x.grad.size(); i++) {
-                x.grad[i] += (x.data[i] > 0) ? out.grad[i] : 0.0f;
+        Tensor* x_ptr = &x;
+        std::vector<float> x_data = x.data;
+        out.backward_fn = [x_ptr, x_data](Tensor& self) {
+            for (size_t i = 0; i < x_ptr->grad.size(); i++) {
+                x_ptr->grad[i] += (x_data[i] > 0) ? self.grad[i] : 0.0f;
             }
         };
     }
@@ -101,42 +103,62 @@ Tensor Conv2D::forward(Tensor& x) {
     if (out.requires_grad) {
         out.parents = {&x, &weight, &bias};
 
-        out.backward_fn = [&](Tensor& self) {
+        Tensor* x_ptr = &x;
+        Tensor* weight_ptr = &weight;
+        Tensor* bias_ptr = &bias;
+        int out_channels_local = out_channels;
+        int kernel_size_local = kernel_size;
+        int stride_local = stride;
+        int padding_local = padding;
+
+        out.backward_fn = [x_ptr,
+                           weight_ptr,
+                           bias_ptr,
+                           N,
+                           C,
+                           H,
+                           W,
+                           H_out,
+                           W_out,
+                           out_channels_local,
+                           kernel_size_local,
+                           stride_local,
+                           padding_local](Tensor& self) {
             // Input gradient
-            if (x.requires_grad) {
+            if (x_ptr->requires_grad) {
                 for (int n = 0; n < N; n++)
                     for (int c = 0; c < C; c++)
                         for (int h = 0; h < H; h++)
                             for (int w = 0; w < W; w++)
-                                x.grad[((n * C + c) * H + h) * W + w] += 0.0f;
+                                x_ptr->grad[((n * C + c) * H + h) * W + w] += 0.0f;
             }
 
             // Weight & bias gradient
             for (int n = 0; n < N; n++) {
-                for (int f = 0; f < out_channels; f++) {
+                for (int f = 0; f < out_channels_local; f++) {
                     for (int i = 0; i < H_out; i++) {
                         for (int j = 0; j < W_out; j++) {
                             float g =
-                                out.grad[((n * out_channels + f) * H_out + i)
-                                             * W_out + j];
-                            bias.grad[f] += g;
+                                self.grad[((n * out_channels_local + f) * H_out + i)
+                                              * W_out + j];
+                            bias_ptr->grad[f] += g;
 
                             for (int c = 0; c < C; c++) {
-                                for (int ki = 0; ki < kernel_size; ki++) {
-                                    for (int kj = 0; kj < kernel_size; kj++) {
-                                        int h = i * stride + ki - padding;
-                                        int w = j * stride + kj - padding;
+                                for (int ki = 0; ki < kernel_size_local; ki++) {
+                                    for (int kj = 0; kj < kernel_size_local; kj++) {
+                                        int h = i * stride_local + ki - padding_local;
+                                        int w = j * stride_local + kj - padding_local;
                                         if (h >= 0 && h < H && w >= 0 && w < W) {
                                             int x_idx =
                                                 ((n * C + c) * H + h) * W + w;
                                             int w_idx =
-                                                ((f * C + c) * kernel_size + ki)
-                                                    * kernel_size + kj;
-                                            weight.grad[w_idx] +=
-                                                x.data[x_idx] * g;
-                                            if (x.requires_grad)
-                                                x.grad[x_idx] +=
-                                                    weight.data[w_idx] * g;
+                                                ((f * C + c) * kernel_size_local + ki)
+                                                    * kernel_size_local + kj;
+                                            weight_ptr->grad[w_idx] +=
+                                                x_ptr->data[x_idx] * g;
+                                            if (x_ptr->requires_grad)
+                                                x_ptr->grad[x_idx] +=
+                                                    weight_ptr->data[w_idx] * g;
                                         }
                                     }
                                 }
@@ -200,9 +222,11 @@ Tensor MaxPool2D::forward(Tensor& x) {
 
     if (out.requires_grad) {
         out.parents = {&x};
-        out.backward_fn = [&](Tensor& self) {
-            for (size_t i = 0; i < out.grad.size(); i++) {
-                x.grad[max_idx[i]] += out.grad[i];
+        Tensor* x_ptr = &x;
+        std::vector<int> max_idx_cache = max_idx;
+        out.backward_fn = [x_ptr, max_idx_cache](Tensor& self) {
+            for (size_t i = 0; i < self.grad.size(); i++) {
+                x_ptr->grad[max_idx_cache[i]] += self.grad[i];
             }
         };
     }
