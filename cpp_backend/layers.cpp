@@ -2,13 +2,26 @@
 #include "ops.h"
 #include <cassert>
 #include <algorithm>
+#include <cmath>
+#include <random>
+
+static float sample_uniform(float low, float high) {
+    static std::mt19937 gen(42);
+    std::uniform_real_distribution<float> dist(low, high);
+    return dist(gen);
+}
 
 /* ---------------- Linear ---------------- */
 Linear::Linear(int in_features, int out_features)
-    : weight(std::vector<float>(in_features * out_features, 0.001f),
+    : weight(std::vector<float>(in_features * out_features, 0.0f),
              {in_features, out_features}, true),
       bias(std::vector<float>(out_features, 0.0f),
-           {1, out_features}, true) {}
+           {1, out_features}, true) {
+    float limit = std::sqrt(6.0f / (in_features + out_features));
+    for (float& w : weight.data) {
+        w = sample_uniform(-limit, limit);
+    }
+}
 
 Tensor Linear::forward(Tensor& x) {
     assert(x.shape.size() == 2);
@@ -117,10 +130,17 @@ Conv2D::Conv2D(int in_c, int out_c, int k,
       kernel_size(k),
       stride(s),
       padding(p),
-      weight(std::vector<float>(out_c * in_c * k * k, 0.001f),
+      weight(std::vector<float>(out_c * in_c * k * k, 0.0f),
              {out_c, in_c, k, k}, true),
       bias(std::vector<float>(out_c, 0.0f),
-           {out_c}, true) {}
+           {out_c}, true) {
+    float fan_in = static_cast<float>(in_c * k * k);
+    float fan_out = static_cast<float>(out_c * k * k);
+    float limit = std::sqrt(6.0f / (fan_in + fan_out));
+    for (float& w : weight.data) {
+        w = sample_uniform(-limit, limit);
+    }
+}
 
 Tensor Conv2D::forward(Tensor& x) {
     assert(x.shape.size() == 4);
