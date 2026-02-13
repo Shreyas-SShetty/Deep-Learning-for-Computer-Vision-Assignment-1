@@ -61,7 +61,6 @@ class ImageFolderDataset:
                 if img is None:
                     continue
 
-                # TODO: replace cv2 with another function
                 img = cv2.resize(img,
                                  (self.image_size, self.image_size))
 
