@@ -19,56 +19,38 @@ void Tensor::zero_grad() {
     grad.assign(data.size(), 0.0f);
 }
 
+static void build_topo(Tensor* t,
+                       std::unordered_set<Tensor*>& visited,
+                       std::vector<Tensor*>& topo) {
+    if (!t || visited.count(t)) return;
+    visited.insert(t);
+
+    for (Tensor* p : t->parents) {
+        build_topo(p, visited, topo);
+    }
+    topo.push_back(t);
+}
+
 void Tensor::backward() {
-    // If this tensor does not require gradient, nothing to do
     if (!requires_grad) return;
 
-    // If grad is empty, initialize with 1s (for scalar loss)
-    if (grad.empty()) {
-        grad.resize(data.size(), 1.0f);
+    std::vector<Tensor*> topo;
+    std::unordered_set<Tensor*> visited;
+    build_topo(this, visited, topo);
+
+    for (Tensor* t : topo) {
+        if (t->requires_grad) {
+            t->grad.assign(t->data.size(), 0.0f);
+        }
     }
 
-    // Call backward function of this node
-    if (backward_fn) {
-        backward_fn(*this);
-    }
+    // dL/dL = 1.0 for the root tensor (typically scalar loss)
+    grad.assign(data.size(), 1.0f);
 
-    // Recursively backpropagate to parents
-    for (Tensor* parent : parents) {
-        if (parent && parent->requires_grad) {
-            parent->backward();
+    for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
+        Tensor* t = *it;
+        if (t->backward_fn) {
+            t->backward_fn(*t);
         }
     }
 }
-
-// static void build_topo(Tensor* t,
-//                        std::unordered_set<Tensor*>& visited,
-//                        std::vector<Tensor*>& topo) {
-//     if (visited.count(t)) return;
-//     visited.insert(t);
-//
-//     for (Tensor* p : t->parents) {
-//         build_topo(p, visited, topo);
-//     }
-//     topo.push_back(t);
-// }
-//
-// void Tensor::backward() {
-//     std::vector<Tensor*> topo;
-//     std::unordered_set<Tensor*> visited;
-//
-//     build_topo(this, visited, topo);
-//
-//     for (Tensor* t : topo) {
-//         if (t->requires_grad) {
-//             t->grad.assign(t->data.size(), 0.0f);
-//         }
-//     }
-//
-//     grad.assign(data.size(), 1.0f);
-//     for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
-//         Tensor* t = *it;
-//         if (t->backward_fn)
-//             t->backward_fn(*t);
-//     }
-// }

@@ -34,18 +34,27 @@ class SimpleCNN:
         self.fc_in_features = 8 * 15 * 15
         self.fc = Linear(self.fc_in_features, num_classes)
 
+        # Keep references to forward-pass tensors so C++ parent pointers
+        # remain valid until backward is executed.
+        self._forward_cache = []
+
     # ---------------- Forward ----------------
     def forward(self, x):
-        x = self.conv.forward(x)
-        x = self.relu.forward(x)
-        x = self.pool.forward(x)
+        x0 = x
+        x1 = self.conv.forward(x0)
+        x2 = self.relu.forward(x1)
+        x3 = self.pool.forward(x2)
 
         # Flatten
         # try to create reshape function in cpp-backend
-        x.shape = [x.shape[0], self.fc_in_features]
+        x3.shape = [x3.shape[0], self.fc_in_features]
 
-        x = self.fc.forward(x)
-        return x
+        out = self.fc.forward(x3)
+
+        # Preserve tensor lifetimes for autograd graph traversal.
+        self._forward_cache = [x0, x1, x2, x3, out]
+
+        return out
 
     # ---------------- Parameters ----------------
     def parameters(self):
@@ -55,6 +64,9 @@ class SimpleCNN:
             self.fc.weight,
             self.fc.bias
         ]
+
+    def clear_forward_cache(self):
+        self._forward_cache = []
 
     # ---------------- Model Stats ----------------
     def compute_stats(self, batch_size):
