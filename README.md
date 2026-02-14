@@ -50,5 +50,5 @@ python eval.py \
 # Resources Used
 
 - Deep Learning Book by Aaron Courville, Ian Goodfellow, and Yoshua Bengio
-- CNN MIT playlist (https://www.youtube.com/watch?v=oGpzWAlP5p0)
+- Slides from GNR-638 classes
 - Codex coding agent for debugging purposes
