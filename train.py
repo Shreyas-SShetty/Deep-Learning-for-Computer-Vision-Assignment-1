@@ -46,13 +46,19 @@ def load_config(config_path):
 
 def main(args):
     config = load_config(args.config_path)
-    num_classes = int(config["num_classes"])
+    num_classes = None
     epochs = int(config.get("epochs", 50))
     batch_size = int(config.get("batch_size", 32))
     lr = float(config.get("lr", 0.05))
 
     dataset = ImageFolderDataset(args.train_path)
     print(f"Dataset loading time: {dataset.loading_time:.3f} seconds")
+
+    num_classes = dataset.num_classes
+    config["num_classes"] = num_classes
+    dataset.sync_num_classes_to_config(args.config_path)
+    print(f"Detected num_classes from dataset: {num_classes}")
+    print(f"Updated config file with detected num_classes: {args.config_path}")
 
     loader = DataLoader(dataset, batch_size, True)
 

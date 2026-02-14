@@ -10,7 +10,7 @@ from models.cnn import SimpleCNN
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, ".."))
-backend_path = os.path.join(project_root, "cpp_backend", "build", "Release")
+backend_path = os.path.join(project_root, "build", "Release")
 
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)

@@ -6,7 +6,7 @@ This project supports grader-friendly execution by using a model configuration f
 
 `model_config.json` is a JSON file that stores model/training settings:
 
-- `num_classes` (required)
+- `num_classes` (auto-updated from dataset folders during training)
 - `epochs` (optional, default `50`)
 - `batch_size` (optional, default `32`)
 - `lr` (optional, default `0.05`)
@@ -23,6 +23,8 @@ Example:
 ```
 
 ## Train
+
+During training, `num_classes` is computed automatically from the number of class subfolders inside `--train_path` and written back into `model_config.json`.
 
 ```bash
 python train.py \
