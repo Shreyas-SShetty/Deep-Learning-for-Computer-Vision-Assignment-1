@@ -6,8 +6,8 @@ import os
 import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.dirname(current_dir)
-backend_path = os.path.join(repo_root, "build", "Release")
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+backend_path = os.path.join(project_root, "cpp_backend", "build", "Release")
 
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
@@ -51,12 +51,9 @@ class ImageFolderDataset:
                 if os.path.isdir(os.path.join(self.root_dir, d))
             ]
         )
-        print("class_names:", class_names)
 
         for idx, class_name in enumerate(class_names):
             self.class_to_idx[class_name] = idx
-
-        print("class_to_idx:", self.class_to_idx)
 
         for class_name in class_names:
             class_path = os.path.join(self.root_dir, class_name)

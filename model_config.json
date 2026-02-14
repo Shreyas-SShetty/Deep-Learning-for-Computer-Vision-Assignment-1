@@ -1,6 +1,6 @@
 {
   "num_classes": 10,
-  "epochs": 50,
+  "epochs": 5,
   "batch_size": 32,
   "lr": 0.05
 }

@@ -46,14 +46,3 @@ python eval.py \
   --test_path /path/to/hidden_test_parent_dir \
   --weights_path model_weights.pkl
 ```
-
-Compatibility mode (old checkpoints):
-
-```bash
-python eval.py \
-  --test_path /path/to/hidden_test_parent_dir \
-  --weights_path old_model_weights.pkl \
-  --num_classes 10
-```
-
-(or pass `--config_path model_config.json`).
