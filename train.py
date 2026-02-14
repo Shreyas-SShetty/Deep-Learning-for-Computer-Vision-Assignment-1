@@ -104,11 +104,17 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_path", required=True)
-    parser.add_argument("--num_classes", type=int, required=True)
+    parser.add_argument("--train_path")
+    parser.add_argument("--num_classes", type=int)
     parser.add_argument("--save_path", default="model_weights.pkl")
     args = parser.parse_args()
 
+    if args.train_path is None:
+        args.train_path = input("Enter training dataset path: ")
+
+    if args.num_classes is None:
+        args.num_classes = int(input("Enter number of classes: "))
+    
     args.epochs = 50       
     args.batch_size = 32   
     args.lr = 0.05        
