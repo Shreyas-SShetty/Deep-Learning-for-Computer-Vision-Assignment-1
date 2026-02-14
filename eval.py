@@ -4,13 +4,18 @@ import pickle
 from data.dataset import ImageFolderDataset
 from data.dataloader import DataLoader
 from models.cnn import SimpleCNN
-
+import os
 import sys
-sys.path.insert(
-    0,
-    r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
-)
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+backend_path = os.path.join(project_root, "cpp_backend", "build", "Release")
+
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 import cpp_backend_ext as _C
+
 Tensor = _C.Tensor
 
 def load_weights(model, path):
