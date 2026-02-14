@@ -10,7 +10,7 @@ sys.path.insert(
     0,
     r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
 )
-import cpp_backend as _C
+import cpp_backend_ext as _C
 Tensor = _C.Tensor
 
 def load_weights(model, path):

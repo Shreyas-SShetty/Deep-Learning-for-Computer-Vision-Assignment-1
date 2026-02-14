@@ -10,7 +10,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(cpp_backend, m) {
+PYBIND11_MODULE(cpp_backend_ext, m) {
     m.doc() = "Custom Deep Learning Framework Backend (GNR638)";
 
     /* ---------------- Tensor ---------------- */

@@ -24,7 +24,7 @@ add_executable(mini_autograd
         main.cpp
 )
 
-pybind11_add_module(cpp_backend
+pybind11_add_module(cpp_backend_ext
         bindings.cpp
         tensor.cpp
         ops.cpp

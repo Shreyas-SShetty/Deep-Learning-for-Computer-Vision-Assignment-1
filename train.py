@@ -1,16 +1,24 @@
 import argparse
 import time
 import pickle
+import os
+import sys
 
 from data.dataset import ImageFolderDataset
 from data.dataloader import DataLoader
 from models.cnn import SimpleCNN
-import sys
-sys.path.insert(
-    0,
-    r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
-)
-import cpp_backend as _C
+#import sys
+#sys.path.insert(
+#    0,
+#    r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
+#)
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_path = os.path.join(current_dir, "build", "Release")
+
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+import cpp_backend_ext as _C
 CrossEntropyLoss = _C.CrossEntropyLoss
 SGD = _C.SGD
 Tensor = _C.Tensor
@@ -98,10 +106,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_path", required=True)
     parser.add_argument("--num_classes", type=int, required=True)
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--save_path", default="model_weights.pkl")
-
     args = parser.parse_args()
+
+    args.epochs = 10       
+    args.batch_size = 32   
+    args.lr = 0.01         
     main(args)

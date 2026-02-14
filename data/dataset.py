@@ -7,8 +7,8 @@ sys.path.insert(
     r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
 )
 
-import cpp_backend
-Tensor = cpp_backend.Tensor
+import cpp_backend_ext
+Tensor = cpp_backend_ext.Tensor
 
 class ImageFolderDataset:
     def __init__(self, root_dir, image_size=32):

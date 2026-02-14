@@ -4,7 +4,7 @@ sys.path.insert(
     r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
 )
 
-import cpp_backend as _C
+import cpp_backend_ext as _C
 
 Conv2D = _C.Conv2D
 ReLU = _C.ReLU
