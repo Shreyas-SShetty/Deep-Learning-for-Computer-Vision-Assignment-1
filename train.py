@@ -109,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", default="model_weights.pkl")
     args = parser.parse_args()
 
-    args.epochs = 10       
+    args.epochs = 50       
     args.batch_size = 32   
-    args.lr = 0.01         
+    args.lr = 0.05        
     main(args)
