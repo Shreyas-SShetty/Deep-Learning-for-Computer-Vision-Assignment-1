@@ -1,55 +1,102 @@
 import argparse
-import time
-import pickle
+import json
 import os
+import pickle
+import shutil
+import subprocess
 import sys
+import time
 
-from data.dataset import ImageFolderDataset
-from data.dataloader import DataLoader
-from models.cnn import SimpleCNN
-#import sys
-#sys.path.insert(
-#    0,
-#    r"C:\Users\shrey\Desktop\cminds\GNR638\Deep-Learning-for-Computer-Vision-Assignment-1\cpp_backend\build\Release"
-#)
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_path = os.path.join(current_dir, "build", "Release")
+def ensure_cpp_backend_built():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    cpp_backend_dir = os.path.join(current_dir, "cpp_backend")
+    build_dir = os.path.join(cpp_backend_dir, "build")
 
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
-import cpp_backend_ext as _C
-CrossEntropyLoss = _C.CrossEntropyLoss
-SGD = _C.SGD
-Tensor = _C.Tensor
+    if os.path.isdir(build_dir):
+        shutil.rmtree(build_dir)
 
-def save_weights(model, path):
+    os.makedirs(build_dir, exist_ok=True)
+
+    cmake_config_cmd = ["cmake", ".."]
+    if os.name == "nt":
+        cmake_config_cmd.extend(["-A", "x64"])
+
+    subprocess.run(cmake_config_cmd, cwd=build_dir, check=True)
+    subprocess.run(["cmake", "--build", ".", "--config", "Release"], cwd=build_dir, check=True)
+
+
+def import_runtime_modules():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_path = os.path.join(current_dir, "cpp_backend", "build", "Release")
+
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
+
+    from data.dataset import ImageFolderDataset
+    from data.dataloader import DataLoader
+    from models.cnn import SimpleCNN
+    import cpp_backend_ext as _C
+
+    return ImageFolderDataset, DataLoader, SimpleCNN, _C
+
+
+def save_checkpoint(model, path, config):
     weights = {}
     for i, p in enumerate(model.parameters()):
         weights[f"param_{i}"] = p.data
+
+    payload = {
+        "weights": weights,
+        "config": {
+            "num_classes": int(config["num_classes"]),
+            "batch_size": int(config.get("batch_size", 32)),
+        },
+    }
+
     with open(path, "wb") as f:
-        pickle.dump(weights, f)
+        pickle.dump(payload, f)
+
+
+def load_config(config_path):
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 def main(args):
-    # -------- Dataset --------
+    ensure_cpp_backend_built()
+    ImageFolderDataset, DataLoader, SimpleCNN, _C = import_runtime_modules()
+
+    CrossEntropyLoss = _C.CrossEntropyLoss
+    SGD = _C.SGD
+    Tensor = _C.Tensor
+
+    config = load_config(args.config_path)
+    epochs = int(config.get("epochs", 50))
+    batch_size = int(config.get("batch_size", 32))
+    lr = float(config.get("lr", 0.05))
+
     dataset = ImageFolderDataset(args.train_path)
     print(f"Dataset loading time: {dataset.loading_time:.3f} seconds")
 
-    loader = DataLoader(dataset, args.batch_size, True)
+    num_classes = dataset.num_classes
+    config["num_classes"] = num_classes
+    dataset.sync_num_classes_to_config(args.config_path)
+    print(f"Detected num_classes from dataset: {num_classes}")
+    print(f"Updated config file with detected num_classes: {args.config_path}")
 
-    # -------- Model --------
-    model = SimpleCNN(args.num_classes)
+    loader = DataLoader(dataset, batch_size, True)
+
+    model = SimpleCNN(num_classes)
     criterion = CrossEntropyLoss()
-    optimizer = SGD(args.lr)
+    optimizer = SGD(lr)
 
-    # -------- Stats --------
-    stats = model.compute_stats(args.batch_size)
+    stats = model.compute_stats(batch_size)
     print("Model Parameters:", stats.parameters)
     print("Model MACs:", stats.macs)
     print("Model FLOPs:", stats.flops)
 
-    # -------- Training --------
-    for epoch in range(args.epochs):
+    for epoch in range(epochs):
         print(">>> Epoch started:", epoch + 1)
         epoch_loss = 0.0
         correct = 0
@@ -58,32 +105,24 @@ def main(args):
         start_time = time.time()
 
         for images, labels in loader:
-            # Stack batch manually
             batch_data = []
             for img in images:
                 batch_data.extend(img.data)
 
             x = Tensor(batch_data, [len(images), 3, 32, 32], True)
 
-            # Forward
             logits = model.forward(x)
-            # print('logits', logits.data, logits.shape)
             loss = criterion.forward(logits, labels)
-            # print('Loss:', loss.data[0])
 
-            # Backward
             loss.backward()
-            # print('logits grad:', logits.grad)
             optimizer.step(model.parameters())
             optimizer.zero_grad(model.parameters())
             model.clear_forward_cache()
 
             epoch_loss += loss.data[0]
 
-            # Accuracy
             for i in range(len(labels)):
-                row = logits.data[i * args.num_classes:
-                                  (i + 1) * args.num_classes]
+                row = logits.data[i * num_classes:(i + 1) * num_classes]
                 pred = row.index(max(row))
                 if pred == labels[i]:
                     correct += 1
@@ -92,30 +131,22 @@ def main(args):
         epoch_time = time.time() - start_time
         acc = 100.0 * correct / total
 
-        print(f"Epoch [{epoch+1}/{args.epochs}] "
-              f"Loss: {epoch_loss:.4f} "
-              f"Accuracy: {acc:.2f}% "
-              f"Time: {epoch_time:.2f}s")
+        print(
+            f"Epoch [{epoch + 1}/{epochs}] "
+            f"Loss: {epoch_loss:.4f} "
+            f"Accuracy: {acc:.2f}% "
+            f"Time: {epoch_time:.2f}s"
+        )
 
-    # -------- Save weights --------
-    save_weights(model, args.save_path)
+    save_checkpoint(model, args.save_path, config)
     print("Training complete. Weights saved to:", args.save_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_path")
-    parser.add_argument("--num_classes", type=int)
+    parser.add_argument("--train_path", required=True)
+    parser.add_argument("--config_path", required=True)
     parser.add_argument("--save_path", default="model_weights.pkl")
-    args = parser.parse_args()
+    parsed_args = parser.parse_args()
 
-    if args.train_path is None:
-        args.train_path = input("Enter training dataset path: ")
-
-    if args.num_classes is None:
-        args.num_classes = int(input("Enter number of classes: "))
-    
-    args.epochs = 50       
-    args.batch_size = 32   
-    args.lr = 0.05        
-    main(args)
+    main(parsed_args)
