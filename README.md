@@ -2,6 +2,11 @@
 
 This project supports grader-friendly execution by using a model configuration file for training and storing the required metadata inside the saved checkpoint.
 
+## Requirements
+
+- Python **3.12 (64-bit)**
+- C++ compiler: **MSVC 64-bit** (Microsoft Visual C++ on Windows)
+
 ## What is the model configuration file?
 
 `model_config.json` is a JSON file that stores model/training settings:
