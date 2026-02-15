@@ -4,16 +4,53 @@ import os
 import pickle
 import sys
 import time
+import subprocess
+from pathlib import Path
+
+
+def ensure_backend():
+    project_root = Path(__file__).resolve().parent
+    backend_src = project_root / "cpp_backend"
+    build_dir = backend_src / "build"
+
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    # Search for compiled backend
+    backend_module = None
+    for file in build_dir.rglob("cpp_backend_ext*"):
+        if file.suffix in {".pyd", ".so"}:
+            backend_module = file
+            break
+
+    # If not found, build it
+    if backend_module is None:
+        print("C++ backend not found. Building now...")
+        subprocess.run(
+            ["cmake", "-S", str(backend_src), "-B", str(build_dir)],
+            check=True,
+        )
+        subprocess.run(
+            ["cmake", "--build", str(build_dir), "--config", "Release"],
+            check=True,
+        )
+
+        for file in build_dir.rglob("cpp_backend_ext*"):
+            if file.suffix in {".pyd", ".so"}:
+                backend_module = file
+                break
+
+    if backend_module is None:
+        raise RuntimeError("Failed to build cpp_backend_ext.")
+
+    sys.path.insert(0, str(backend_module.parent))
+
+
+# Call it before importing
+ensure_backend()
 
 from data.dataset import ImageFolderDataset
 from data.dataloader import DataLoader
 from models.cnn import SimpleCNN
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_path = os.path.join(current_dir, "build", "Release")
-
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
 
 import cpp_backend_ext as _C
 
